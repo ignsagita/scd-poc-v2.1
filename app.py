@@ -159,33 +159,43 @@ def _chart_cost_comparison(results: dict) -> go.Figure:
     total  = [l + f for l, f in zip(lc, fc)]
     colors = [SCENARIO_COLORS.get(l, "#607D8B") for l in labels]
 
+    # Zoom y-axis so scenario differences are visible — show ±8% band around the range
+    y_min  = max(0, min(total) * 0.92)
+    y_max  = max(total) * 1.06
+
     fig = go.Figure()
     fig.add_trace(go.Bar(
         name="Landed Cost", x=labels, y=lc,
         marker_color=colors,
         text=[f"{v:.1f}" for v in lc],
         textposition="inside", insidetextanchor="middle",
+        textfont=dict(color="white", size=13),
     ))
     fig.add_trace(go.Bar(
         name="Fixed Plant Cost", x=labels, y=fc,
         marker_color="#90A4AE",
-        text=[f"{v:.1f}" for v in fc],
-        textposition="inside", insidetextanchor="middle",
+        text=[f"+{v:.1f}" for v in fc],
+        textposition="outside",
+        textfont=dict(size=11),
     ))
-    # Annotate total on top of each stacked bar
-    for i, (x_val, t_val) in enumerate(zip(labels, total)):
+    # Total annotation above each bar
+    for x_val, t_val in zip(labels, total):
         fig.add_annotation(
-            x=x_val, y=t_val, text=f"<b>{t_val:.1f}</b>",
-            showarrow=False, yshift=8, font=dict(size=12),
+            x=x_val, y=t_val,
+            text=f"<b>Total: {t_val:.1f}</b>",
+            showarrow=False, yshift=22,
+            font=dict(size=12),
         )
     fig.update_layout(
-        barmode="stack", title="Total Lifecycle Cost (MSEK)",
+        barmode="stack",
+        title="Total Lifecycle Cost (MSEK) — zoomed to show differences",
         yaxis_title="MSEK",
+        yaxis_range=[y_min, y_max],
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        height=420, margin=dict(t=80, b=20, l=60, r=20),
+        height=460, margin=dict(t=90, b=30, l=70, r=20),
         plot_bgcolor="white", paper_bgcolor="white",
     )
-    fig.update_xaxes(gridcolor="#F0F0F0")
+    fig.update_xaxes(gridcolor="#F0F0F0", tickfont=dict(size=12))
     fig.update_yaxes(gridcolor="#F0F0F0")
     return fig
 
@@ -319,87 +329,138 @@ def _chart_sankey(om_kpis: dict, baseline_kpis: dict, data: SCDData) -> go.Figur
 
 
 def _chart_alpha_sensitivity(alpha_results: list[dict]) -> go.Figure:
+    from plotly.subplots import make_subplots
+
     alphas  = [r["alpha"] for r in alpha_results]
     costs   = [r["total_lc_sek"]/1e6 for r in alpha_results]
     plants  = [r["n_open_plants"] for r in alpha_results]
     new_rts = [len(r["new_routes_df"]) for r in alpha_results]
 
-    fig = go.Figure()
+    # Two subplots: top = landed cost, bottom = open plants & alerts
+    # Dual y-axis fails when scales differ by orders of magnitude (1539 MSEK vs 2–4 plants)
+    fig = make_subplots(
+        rows=2, cols=1,
+        subplot_titles=[
+            "Landed Cost (MSEK) — how cost changes with α",
+            "Network structure — # open plants and new-route alerts",
+        ],
+        vertical_spacing=0.18,
+    )
+
     fig.add_trace(go.Scatter(
         x=alphas, y=costs, name="Landed Cost (MSEK)",
-        mode="lines+markers", line=dict(color="#1976D2", width=2),
-        yaxis="y1",
-    ))
+        mode="lines+markers",
+        line=dict(color="#1976D2", width=2.5),
+        marker=dict(size=8),
+    ), row=1, col=1)
+
     fig.add_trace(go.Scatter(
         x=alphas, y=plants, name="# Open Plants",
-        mode="lines+markers", line=dict(color="#E65100", width=2, dash="dash"),
-        yaxis="y2",
-    ))
+        mode="lines+markers",
+        line=dict(color="#E65100", width=2.5, dash="dash"),
+        marker=dict(size=8),
+    ), row=2, col=1)
+
     fig.add_trace(go.Scatter(
         x=alphas, y=new_rts, name="New-Route Alerts",
-        mode="lines+markers", line=dict(color="#2E7D32", width=2, dash="dot"),
-        yaxis="y2",
-    ))
-    fig.update_layout(
-        title="Alpha (α) Sensitivity — Effect on Cost & Network Structure",
-        xaxis=dict(title="α value", tickformat=".3f"),
-        yaxis=dict(title="Landed Cost (MSEK)", side="left"),
-        yaxis2=dict(title="Count", side="right", overlaying="y"),
-        legend=dict(orientation="h", y=1.1),
-        height=380, plot_bgcolor="white", paper_bgcolor="white",
-        margin=dict(t=70, b=40),
+        mode="lines+markers",
+        line=dict(color="#2E7D32", width=2.5, dash="dot"),
+        marker=dict(size=8),
+    ), row=2, col=1)
+
+    # Zoom cost y-axis to show changes clearly
+    cost_min = min(costs)
+    cost_max = max(costs)
+    cost_pad = max((cost_max - cost_min) * 0.5, 0.5)
+
+    fig.update_yaxes(
+        title_text="MSEK",
+        range=[cost_min - cost_pad, cost_max + cost_pad],
+        gridcolor="#F0F0F0", row=1, col=1,
     )
-    fig.update_xaxes(gridcolor="#F0F0F0")
-    fig.update_yaxes(gridcolor="#F0F0F0")
+    fig.update_yaxes(
+        title_text="Count",
+        range=[0, max(max(plants), max(new_rts)) + 1],
+        dtick=1, gridcolor="#F0F0F0", row=2, col=1,
+    )
+    fig.update_xaxes(title_text="α value", tickformat=".3f", gridcolor="#F0F0F0")
+
+    fig.update_layout(
+        title="Alpha (α) Sensitivity — higher α = stronger preference for historical routes",
+        height=520,
+        plot_bgcolor="white", paper_bgcolor="white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(t=90, b=40, l=70, r=20),
+    )
     return fig
 
 
 def _chart_demand_check(results: dict, data: SCDData) -> go.Figure:
-    """Small multiples: demand vs allocated per (product, CG) per scenario."""
-    scenarios = list(results.keys())
-    products  = data.products_list
-
-    n_cols = len(scenarios)
-    n_rows = len(products)
-
+    """
+    One chart per product. X-axis = customer groups. Bar groups = scenarios.
+    Light bar = demand. Dark bar = allocated. Shows demand satisfaction at a glance.
+    """
     from plotly.subplots import make_subplots
+
+    products  = data.products_list
+    scenarios = list(results.keys())
+    n_rows    = len(products)
+
     fig = make_subplots(
-        rows=n_rows, cols=n_cols,
-        subplot_titles=[f"{s}<br>{p[:18]}" for p in products for s in scenarios],
-        shared_yaxes=False, vertical_spacing=0.12, horizontal_spacing=0.06,
+        rows=n_rows, cols=1,
+        subplot_titles=[f"Demand Satisfaction — {p}" for p in products],
+        vertical_spacing=0.14,
     )
+
+    # One colour per scenario for the "allocated" bars
+    scen_colors = [SCENARIO_COLORS.get(s, "#607D8B") for s in scenarios]
 
     for pi, prod in enumerate(products):
-        active = [(i,g) for (i,g) in data.active_ig if i == prod]
-        cgs    = [g for _,g in active]
+        active_cgs = [g for (i, g) in data.active_ig if i == prod]
+        row = pi + 1
 
+        # Demand bar (same for all scenarios — plot once per product)
+        d_vals = [data.demand_map.get((prod, cg), 0) / 1000 for cg in active_cgs]
+        fig.add_trace(go.Bar(
+            name="Demand",
+            x=active_cgs, y=d_vals,
+            marker_color="#CFD8DC",
+            marker_line=dict(color="#607D8B", width=1.5),
+            showlegend=(pi == 0),
+        ), row=row, col=1)
+
+        # Allocated bar per scenario
         for si, (label, kpis) in enumerate(results.items()):
-            d_vals = [data.demand_map.get((prod,cg),0)/1000 for cg in cgs]
             a_vals = []
-            for cg in cgs:
+            for cg in active_cgs:
                 sub = kpis["alloc_df"]
-                qty = sub[(sub.ProductID==prod)&(sub.CG==cg)].Qty.sum()
-                a_vals.append(qty/1000)
+                qty = sub[(sub.ProductID == prod) & (sub.CG == cg)].Qty.sum()
+                a_vals.append(qty / 1000)
 
-            r, c = pi + 1, si + 1
-            color = PRODUCT_COLORS.get(prod, "#888")
-            fig.add_trace(
-                go.Bar(name="Demand", x=cgs, y=d_vals, marker_color="#90CAF9",
-                       showlegend=(r == 1 and c == 1)),
-                row=r, col=c,
-            )
-            fig.add_trace(
-                go.Bar(name="Allocated", x=cgs, y=a_vals, marker_color=color,
-                       opacity=0.85, showlegend=(r == 1 and c == 1)),
-                row=r, col=c,
-            )
+            fig.add_trace(go.Bar(
+                name=label,
+                x=active_cgs, y=a_vals,
+                marker_color=scen_colors[si],
+                opacity=0.75,
+                showlegend=(pi == 0),
+            ), row=row, col=1)
+
+        fig.update_yaxes(title_text="k units", gridcolor="#F0F0F0", row=row, col=1)
+        fig.update_xaxes(gridcolor="#F0F0F0", tickfont=dict(size=12), row=row, col=1)
 
     fig.update_layout(
-        title="Demand Satisfaction by Scenario & Product (k units)",
-        barmode="group", height=280 * n_rows,
-        plot_bgcolor="white", paper_bgcolor="white",
-        margin=dict(t=80, b=40),
+        title=(
+            "Demand Satisfaction Check — grey bar = required demand, "
+            "coloured bars = allocated by scenario"
+        ),
+        barmode="group",
+        height=320 * n_rows,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        margin=dict(t=100, b=40, l=70, r=20),
     )
+    return fig
     return fig
 
 
@@ -900,9 +961,9 @@ def render_results_tab():
                 baseline_options, key="sankey_baseline",
             )
             st.caption(
-                "Blue = route continues from the selected baseline  |  "
-                "Green = new route proposed by OM (no historical precedent — check Alerts tab)  |  "
-                "Red = route that existed in baseline but dropped by OM (shown thin).  "
+                "🔵 Blue = route continues from the selected baseline  |  "
+                "🟢 Green = new route proposed by OM (no historical precedent — check Alerts tab)  |  "
+                "🔴 Red = route that existed in baseline but dropped by OM (shown thin).  "
                 "Hover over any link for exact volumes."
             )
             fig_sankey = _chart_sankey(
