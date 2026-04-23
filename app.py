@@ -690,24 +690,18 @@ def render_config_tab():
     if run_b2_flag:
         st.subheader("B2 — Baseline Plant")
         st.caption(
-            "All lifecycle demand for each product is assigned to this single plant. "
+            "All lifecycle demand (across all products) is assigned to this single plant. "
             "Used as the **TPI cost-avoidance reference** — the SCB compares OM savings against this scenario."
         )
-        b2_plants = {}
-        b2_cols = st.columns(len(data.products_list))
-        for idx, prod in enumerate(data.products_list):
-            options = data.plants_list
-            labels  = [f"{p}  ({data.plant_name[p]}, {data.plant_geo[p]}, {data.plant_cat[p]})"
-                       for p in options]
-            # Default: TC Poland (ERI/PL-TC) if available
-            default_idx = next((i for i,p in enumerate(options) if "PL" in p), 0)
-            sel = b2_cols[idx].selectbox(
-                f"Baseline for {prod}", options=options,
-                index=default_idx, format_func=lambda p: f"{p} ({data.plant_name[p]})",
-                key=f"b2_plant_{prod}",
-            )
-            b2_plants[prod] = sel
-        cfg["b2_baseline_plant"] = b2_plants
+        default_idx = next((i for i, p in enumerate(data.plants_list) if "PL" in p), 0)
+        b2_plant = st.selectbox(
+            "Baseline plant for all products:",
+            options=data.plants_list,
+            index=default_idx,
+            format_func=lambda p: f"{p}  ({data.plant_name[p]} — {data.plant_geo[p]}, {data.plant_cat[p]})",
+            key="b2_plant_single",
+        )
+        cfg["b2_baseline_plant"] = {prod: b2_plant for prod in data.products_list}
         st.divider()
 
     if run_om_flag:
