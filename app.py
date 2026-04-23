@@ -32,7 +32,6 @@ from scd_engine import (
 
 st.set_page_config(
     page_title="SCD POC v2",
-    page_icon="🔧",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -157,24 +156,33 @@ def _chart_cost_comparison(results: dict) -> go.Figure:
     labels = list(results.keys())
     lc     = [results[l]["total_lc_sek"]/1e6 for l in labels]
     fc     = [results[l]["fixed_cost_sek"]/1e6 for l in labels]
+    total  = [l + f for l, f in zip(lc, fc)]
     colors = [SCENARIO_COLORS.get(l, "#607D8B") for l in labels]
 
     fig = go.Figure()
     fig.add_trace(go.Bar(
-        name="Landed Cost",   x=labels, y=lc,
-        marker_color=colors,  text=[f"{v:.1f}" for v in lc],
+        name="Landed Cost", x=labels, y=lc,
+        marker_color=colors,
+        text=[f"{v:.1f}" for v in lc],
         textposition="inside", insidetextanchor="middle",
     ))
     fig.add_trace(go.Bar(
         name="Fixed Plant Cost", x=labels, y=fc,
-        marker_color="#CFD8DC",  marker_pattern_shape="/",
+        marker_color="#90A4AE",
         text=[f"{v:.1f}" for v in fc],
-        textposition="inside",   insidetextanchor="middle",
+        textposition="inside", insidetextanchor="middle",
     ))
+    # Annotate total on top of each stacked bar
+    for i, (x_val, t_val) in enumerate(zip(labels, total)):
+        fig.add_annotation(
+            x=x_val, y=t_val, text=f"<b>{t_val:.1f}</b>",
+            showarrow=False, yshift=8, font=dict(size=12),
+        )
     fig.update_layout(
         barmode="stack", title="Total Lifecycle Cost (MSEK)",
-        yaxis_title="MSEK", legend=dict(orientation="h", y=1.08),
-        height=380, margin=dict(t=60, b=20),
+        yaxis_title="MSEK",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        height=420, margin=dict(t=80, b=20, l=60, r=20),
         plot_bgcolor="white", paper_bgcolor="white",
     )
     fig.update_xaxes(gridcolor="#F0F0F0")
@@ -197,8 +205,8 @@ def _chart_geo(results: dict) -> go.Figure:
         barmode="stack", title="Volume by Geography (%)",
         yaxis_title="% of Lifecycle Volume",
         yaxis_range=[0, 115],
-        legend=dict(orientation="h", y=1.08),
-        height=380, margin=dict(t=60, b=20),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        height=420, margin=dict(t=80, b=20, l=60, r=20),
         plot_bgcolor="white", paper_bgcolor="white",
     )
     fig.update_xaxes(gridcolor="#F0F0F0")
@@ -284,12 +292,11 @@ def _chart_sankey(om_kpis: dict, baseline_kpis: dict, data: SCDData) -> go.Figur
         )
 
     fig = go.Figure(go.Sankey(
-        arrangement="snap",
         node=dict(
-            pad=20, thickness=18,
+            pad=25, thickness=20,
             label=node_labels,
             color=node_colors,
-            x=[0.01]*n_p + [0.99]*n_g,
+            x=[0.08]*n_p + [0.88]*n_g,
             y=plant_y + cg_y,
             hovertemplate="%{label}<extra></extra>",
         ),
@@ -303,9 +310,9 @@ def _chart_sankey(om_kpis: dict, baseline_kpis: dict, data: SCDData) -> go.Figur
         ),
     ))
     fig.update_layout(
-        title=f"Network Flow — OM vs {baseline_kpis['label']}",
-        height=480,
-        margin=dict(l=10, r=10, t=50, b=10),
+        title=f"Network Flow — Optimised (OM) vs {baseline_kpis['label']}",
+        height=620,
+        margin=dict(l=140, r=160, t=60, b=20),
         font=dict(size=12),
     )
     return fig
@@ -401,7 +408,7 @@ def _chart_demand_check(results: dict, data: SCDData) -> go.Figure:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def render_data_tab():
-    st.header("📂 Input Data")
+    st.header("Input Data")
     st.caption(
         "Download the CSV templates, edit them in Excel or any spreadsheet tool, "
         "then upload your modified files. Only upload files you have changed — "
@@ -412,9 +419,9 @@ def render_data_tab():
 
     # ── Current data status ───────────────────────────────────────────────────
     source_badge = (
-        "🟢 **Uploaded data active**"
+        "**Uploaded data active**"
         if st.session_state.data_source == "uploaded"
-        else "🔵 **Default dummy data active**"
+        else "**Default dummy data active**"
     )
     st.info(source_badge + "  ·  Replace any file below to customise.")
 
@@ -429,7 +436,7 @@ def render_data_tab():
     st.divider()
 
     # ── Download templates ────────────────────────────────────────────────────
-    st.subheader("⬇ Download Templates")
+    st.subheader("Download Templates")
     st.caption("Each file includes only the columns the model expects. Column descriptions are below each download button.")
 
     file_cols = st.columns(4)
@@ -443,7 +450,7 @@ def render_data_tab():
             except Exception:
                 csv_bytes = b""
             col.download_button(
-                label=f"📄 {fname}",
+                label=fname,
                 data=csv_bytes,
                 file_name=fname,
                 mime="text/csv",
@@ -463,14 +470,14 @@ def render_data_tab():
     st.divider()
 
     # ── Upload section ────────────────────────────────────────────────────────
-    st.subheader("⬆ Upload Modified Files")
+    st.subheader("Upload Modified Files")
     st.caption(
         "Upload one or more CSV files. Each file is validated before being accepted. "
         "Unmodified files continue using the built-in defaults."
     )
 
     uploaded = st.file_uploader(
-        "Drag & drop CSV files here (or click to browse)",
+        "Drag and drop CSV files here (or click to browse)",
         type="csv",
         accept_multiple_files=True,
         key="csv_uploader",
@@ -483,7 +490,7 @@ def render_data_tab():
         for f in uploaded:
             fname = f.name
             if fname not in SCHEMAS:
-                st.error(f"❌ **{fname}** — not a recognised input file. "
+                st.error(f"{fname} — not a recognised input file. "
                          f"Expected one of: {list(SCHEMAS.keys())}")
                 all_valid = False
                 continue
@@ -492,16 +499,16 @@ def render_data_tab():
             errs = validate_dataframe(fname, df)
 
             if errs:
-                st.error(f"❌ **{fname}** — {len(errs)} validation error(s):")
+                st.error(f"{fname} — {len(errs)} validation error(s):")
                 for e in errs:
                     st.markdown(f"  - {e}")
                 all_valid = False
             else:
                 new_dfs[fname] = df
-                st.success(f"✅ **{fname}** — {len(df)} rows, all checks passed")
+                st.success(f"{fname} — {len(df)} rows, all checks passed")
 
         if all_valid and new_dfs:
-            if st.button("✅ Apply Uploaded Files", type="primary"):
+            if st.button("Apply Uploaded Files", type="primary"):
                 with st.spinner("Building data model from uploaded files…"):
                     try:
                         new_data = SCDData.from_dataframes(new_dfs)
@@ -517,7 +524,7 @@ def render_data_tab():
             st.warning("Fix the errors above before applying.")
 
     if st.session_state.data_source == "uploaded":
-        if st.button("🔄 Reset to Default Data"):
+        if st.button("Reset to Default Data"):
             st.session_state.data        = None
             st.session_state.data_source = "default"
             st.session_state.results     = {}
@@ -528,7 +535,7 @@ def render_data_tab():
 
     # ── Data preview ──────────────────────────────────────────────────────────
     if data:
-        st.subheader("🔍 Preview Current Data")
+        st.subheader("Preview Current Data")
         preview_file = st.selectbox("Select file to preview", list(SCHEMAS.keys()),
                                     key="preview_select")
         file_map = {
@@ -551,20 +558,20 @@ def render_data_tab():
 # ══════════════════════════════════════════════════════════════════════════════
 
 def render_config_tab():
-    st.header("⚙️ Scenario Configuration")
+    st.header("Scenario Configuration")
 
     data = get_data()
     if data is None:
-        st.error("No data loaded. Check the **Data** tab first.")
+        st.error("No data loaded. Check the Data tab first.")
         return
 
     st.caption(
         "Select which scenarios to run and configure their parameters. "
-        "Click **Run Scenarios** at the bottom when ready."
+        "Click Run Scenarios at the bottom when ready."
     )
 
     # ── Demand adjustments (what-if) ──────────────────────────────────────────
-    with st.expander("📊 What-If Demand Adjustment (optional)", expanded=False):
+    with st.expander("What-If Demand Adjustment (optional)", expanded=False):
         st.caption(
             "Adjust lifecycle demand per hub by a percentage before running. "
             "Applies to ALL scenarios and ALL products for that hub. "
@@ -721,7 +728,7 @@ def render_config_tab():
             st.error(f"⚠ Geo-mix percentages sum to **{gm_total:.1f}%** — must equal 100%.")
             run_gm_flag = False
         else:
-            st.success(f"✅ Total = {gm_total:.0f}%")
+            st.success(f"Total = {gm_total:.0f}% — valid")
         cfg["gm_geo_mix"] = gm_vals
         st.divider()
 
@@ -770,7 +777,7 @@ def _run_scenarios(data: SCDData, cfg: dict,
                 "geo_params":   cfg.get("om_geo_params", data.geo_params),
                 "cat_params":   cfg.get("om_cat_params", data.cat_params),
             }
-            with st.spinner("🔄 Solving MILP… (CBC solver, up to 5 min timeout)"):
+            with st.spinner("Solving MILP… (CBC solver, up to 5 min timeout)"):
                 alloc, meta = run_om(data, om_cfg)
             results["OM-Optimised"] = compute_kpis(
                 alloc, data, "OM-Optimised", meta=meta)
@@ -781,13 +788,13 @@ def _run_scenarios(data: SCDData, cfg: dict,
             alloc, alerts = run_gm(data, gm_cfg)
             results["GM-GeoMix"] = compute_kpis(alloc, data, "GM-GeoMix", alerts=alerts)
 
-        progress.progress(1.0, text="Done ✅")
+        progress.progress(1.0, text="Done")
         st.session_state.results = results
-        st.success(f"✅ {len(results)} scenario(s) complete. Switch to the **Results** tab to explore.")
+        st.success(f"{len(results)} scenario(s) complete. Switch to the Results tab to explore.")
 
     except Exception as e:
         progress.empty()
-        st.error(f"❌ Run failed: {e}")
+        st.error(f"Run failed: {e}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -795,17 +802,42 @@ def _run_scenarios(data: SCDData, cfg: dict,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def render_results_tab():
-    st.header("📊 Results")
+    st.header("Results")
 
     results = st.session_state.results
     data    = get_data()
 
     if not results:
-        st.info("No results yet. Configure scenarios in the **Configuration** tab and click **Run Scenarios**.")
+        st.info("No results yet. Configure scenarios in the Configuration tab and click Run Scenarios.")
         return
     if data is None:
         st.error("Data not loaded.")
         return
+
+    # ── Scenario legend ───────────────────────────────────────────────────────
+    st.caption(
+        "**B1-Nearest** = demand assigned to cheapest allowed plant per hub (deterministic)  |  "
+        "**B2-Baseline** = all demand through one reference plant — used as the cost benchmark  |  "
+        "**OM-Optimised** = MILP solution minimising total cost subject to all constraints  |  "
+        "**GM-GeoMix** = user-specified geography volume split (e.g. 30% CN / 70% EU)"
+    )
+
+    # ── KPI glossary ──────────────────────────────────────────────────────────
+    with st.expander("KPI definitions — click to expand", expanded=False):
+        st.markdown("""
+| KPI | Definition |
+|-----|-----------|
+| **Total Cost (MSEK)** | Landed cost + fixed plant overhead across all products and hubs for the full lifecycle horizon. This is the primary cost figure for SCB. |
+| **Landed Cost (MSEK)** | Volume × LC multiplier × unit cost (TK) per route, summed across all products. Excludes fixed plant overhead. |
+| **Fixed Cost (MSEK)** | Annual plant overhead (line setup, qualification, staffing) × lifecycle years, for each open plant. This cost is incurred regardless of volume. |
+| **Cost / Unit (SEK)** | Total landed cost divided by total lifecycle volume. Volume-weighted average cost per unit shipped. |
+| **Weighted LC %** | Volume-weighted average of the landed cost multiplier (LCmult = 1 + Adder%) across all active routes. A lower % means cheaper routing overall. |
+| **# Open Plants** | Number of distinct plants used in this network design. More plants = more operational complexity and higher fixed cost. |
+| **TPI Avoidance vs B2** | Cost saving vs the B2 Baseline Plant scenario. **Positive = savings** (this scenario is cheaper than B2). **Negative = extra cost** (this scenario is more expensive than B2). The primary KPI presented to the Supply Chain Board. |
+| **New-Route Alerts** | Number of plant-to-hub flows proposed that have no historical precedent. Each alert requires SCB review before implementation. |
+""")
+
+    st.divider()
 
     # ── KPI Cards ─────────────────────────────────────────────────────────────
     st.subheader("Key Performance Indicators")
@@ -813,24 +845,37 @@ def render_results_tab():
 
     kpi_cols = st.columns(len(results))
     for col, (label, k) in zip(kpi_cols, results.items()):
-        avoidance = (
-            f"+{(b2_cost - k['total_cost_sek'])/1e6:.1f} MSEK"
-            if b2_cost and label != "B2-Baseline" else "—"
-        )
-        col.metric("Scenario",             label)
-        col.metric("Total Cost (MSEK)",    f"{k['total_cost_sek']/1e6:.1f}")
-        col.metric("Landed Cost (MSEK)",   f"{k['total_lc_sek']/1e6:.1f}")
-        col.metric("Fixed Cost (MSEK)",    f"{k['fixed_cost_sek']/1e6:.1f}")
-        col.metric("Cost / Unit (SEK)",    f"{k['cost_per_unit_sek']:,.0f}")
-        col.metric("Weighted LC %",        f"{k['weighted_lc_pct']:.2f}%")
-        col.metric("# Open Plants",        k["n_open_plants"])
-        col.metric("TPI Avoidance vs B2",  avoidance)
-        col.metric("New-Route Alerts",     len(k["new_routes_df"]))
+        if b2_cost and label != "B2-Baseline":
+            val = (b2_cost - k["total_cost_sek"]) / 1e6
+            avoidance = f"{val:+.1f} MSEK"
+        else:
+            avoidance = "— (reference)"
+        col.metric("Scenario",           label)
+        col.metric("Total Cost (MSEK)",  f"{k['total_cost_sek']/1e6:.1f}",
+                   help="Landed cost + fixed plant overhead. Primary SCB cost figure.")
+        col.metric("Landed Cost (MSEK)", f"{k['total_lc_sek']/1e6:.1f}",
+                   help="Volume × LCmult × UnitCost per route. Excludes fixed plant overhead.")
+        col.metric("Fixed Cost (MSEK)",  f"{k['fixed_cost_sek']/1e6:.1f}",
+                   help="Annual plant overhead × lifecycle years, for each open plant.")
+        col.metric("Cost / Unit (SEK)",  f"{k['cost_per_unit_sek']:,.0f}",
+                   help="Total landed cost ÷ total lifecycle volume.")
+        col.metric("Weighted LC %",      f"{k['weighted_lc_pct']:.2f}%",
+                   help="Volume-weighted average LC multiplier across all active routes. Lower is better.")
+        col.metric("# Open Plants",      k["n_open_plants"],
+                   help="Number of distinct plants used. More plants = more complexity and fixed cost.")
+        col.metric("TPI Avoidance vs B2", avoidance,
+                   help="Positive = cheaper than B2 baseline (cost saving). Negative = more expensive than B2.")
+        col.metric("New-Route Alerts",   len(k["new_routes_df"]),
+                   help="Flows with no historical precedent. Each requires SCB review.")
 
     st.divider()
 
     # ── Cost & Geo Charts ─────────────────────────────────────────────────────
     st.subheader("Cost & Geography Breakdown")
+    st.caption(
+        "Left chart: total lifecycle cost split into landed cost (coloured) and fixed plant overhead (grey). "
+        "Right chart: share of total volume produced in each geography."
+    )
     ch1, ch2 = st.columns(2)
     ch1.plotly_chart(_chart_cost_comparison(results), use_container_width=True)
     ch2.plotly_chart(_chart_geo(results),             use_container_width=True)
@@ -838,21 +883,27 @@ def render_results_tab():
     st.divider()
 
     # ── Sankey ────────────────────────────────────────────────────────────────
-    st.subheader("🌊 Network Flow Diagram")
+    st.subheader("Network Flow Diagram")
+    st.caption(
+        "Shows which plants supply which hubs, and how the Optimised (OM) network differs "
+        "from a selected baseline. Link width represents volume. Hover over any link for details."
+    )
     if "OM-Optimised" not in results:
-        st.info("Run the **OM** scenario to see the network flow diagram.")
+        st.info("Run the Optimised (OM) scenario to see the network flow diagram.")
     else:
         baseline_options = [l for l in results if l != "OM-Optimised"]
         if not baseline_options:
             st.caption("Run at least one baseline scenario (B1 or B2) to compare against.")
         else:
             compare_to = st.selectbox(
-                "Compare OM against:", baseline_options, key="sankey_baseline",
+                "Compare Optimised (OM) result against:",
+                baseline_options, key="sankey_baseline",
             )
             st.caption(
-                "🔵 **Blue** = route continues from baseline  "
-                "🟢 **Green** = new route proposed by OM  "
-                "🔴 **Red** = route dropped by OM (shown thin)"
+                "Blue = route continues from the selected baseline  |  "
+                "Green = new route proposed by OM (no historical precedent — check Alerts tab)  |  "
+                "Red = route that existed in baseline but dropped by OM (shown thin).  "
+                "Hover over any link for exact volumes."
             )
             fig_sankey = _chart_sankey(
                 results["OM-Optimised"], results[compare_to], data
@@ -862,14 +913,14 @@ def render_results_tab():
     st.divider()
 
     # ── Demand satisfaction ───────────────────────────────────────────────────
-    with st.expander("✅ Demand Satisfaction Check", expanded=False):
+    with st.expander("Demand Satisfaction Check", expanded=False):
         st.caption("Demand = Allocated confirms constraint C1 is satisfied for all scenarios.")
         st.plotly_chart(_chart_demand_check(results, data), use_container_width=True)
 
     st.divider()
 
     # ── Alpha Sensitivity ─────────────────────────────────────────────────────
-    with st.expander("📉 Alpha (α) Sensitivity Analysis", expanded=False):
+    with st.expander("Alpha (α) Sensitivity Analysis", expanded=False):
         st.caption(
             "Re-runs the OM scenario at multiple α values to show how the penalty weight "
             "affects total cost, number of open plants, and new-route alerts."
@@ -920,7 +971,7 @@ def render_results_tab():
     st.divider()
 
     # ── Alerts Panel ──────────────────────────────────────────────────────────
-    st.subheader("⚠️ Alerts")
+    st.subheader("Alerts")
     alert_tab_labels = list(results.keys())
     alert_tabs = st.tabs(alert_tab_labels)
 
@@ -934,23 +985,20 @@ def render_results_tab():
 
             # New-route alerts
             if not k["new_routes_df"].empty:
-                st.markdown("**🆕 New SCD Flows (no historical precedent)**")
+                st.markdown("**New SCD Flows (no historical precedent)**")
                 st.caption(
                     "These routes exist in the proposed network but were NOT used historically. "
                     "Review with SCB before approving — each is a change-management signal."
                 )
                 nr = k["new_routes_df"][["ProductID","PlantID","CG","Qty","LCmult"]].copy()
                 nr["Qty"] = nr["Qty"].round().astype(int)
-                st.dataframe(
-                    nr.style.background_gradient(subset=["Qty"], cmap="YlOrRd"),
-                    use_container_width=True, hide_index=True,
-                )
+                st.dataframe(nr, use_container_width=True, hide_index=True)
             else:
                 st.success("No new-route alerts — all flows match historical patterns.")
 
             # Consolidation alerts
             if not k["consol_df"].empty:
-                st.markdown("**📦 Consolidation Candidates**")
+                st.markdown("**Consolidation Candidates**")
                 st.caption(
                     "Products whose total lifecycle demand is below the MinProd_ifOpen threshold. "
                     "Consider consolidating production to a single plant."
@@ -960,15 +1008,13 @@ def render_results_tab():
     st.divider()
 
     # ── Allocation Detail Tables ───────────────────────────────────────────────
-    with st.expander("📋 Full Allocation Tables", expanded=False):
+    with st.expander("Full Allocation Tables", expanded=False):
         detail_scenario = st.selectbox(
             "Show allocation for:", list(results.keys()), key="detail_scen"
         )
         kpis_detail = results[detail_scenario]
         st.dataframe(
-            kpis_detail["alloc_df"].style.background_gradient(
-                subset=["LandedCost_SEK"], cmap="Blues"
-            ),
+            kpis_detail["alloc_df"],
             use_container_width=True, height=400,
         )
         st.markdown("**Plant Summary**")
@@ -977,11 +1023,11 @@ def render_results_tab():
     st.divider()
 
     # ── Downloads ─────────────────────────────────────────────────────────────
-    st.subheader("⬇ Download Results")
+    st.subheader("Download Results")
     dc1, dc2 = st.columns(2)
 
     dc1.download_button(
-        "📦 Download All Results (ZIP)",
+        "Download All Results (ZIP)",
         data=_results_zip(results),
         file_name="scd_poc_v2_results.zip",
         mime="application/zip",
@@ -991,7 +1037,7 @@ def render_results_tab():
     dl_scen = dc2.selectbox("Or download single scenario:", list(results.keys()),
                              key="dl_single_sel")
     dc2.download_button(
-        f"📄 Download {dl_scen} — alloc.csv",
+        f"Download {dl_scen} — alloc.csv",
         data=_df_to_csv_bytes(results[dl_scen]["alloc_df"]),
         file_name=f"alloc_{dl_scen}.csv",
         mime="text/csv",
@@ -1004,7 +1050,7 @@ def render_results_tab():
 # ══════════════════════════════════════════════════════════════════════════════
 
 def render_about_tab():
-    st.header("📖 About This Model")
+    st.header("About This Model")
 
     st.subheader("Business Purpose")
     st.markdown(
@@ -1057,7 +1103,7 @@ def render_about_tab():
 | `coverage_params.csv` | Coverage constraint defaults | User/scenario configuration |
 """)
 
-    st.subheader("⚠ Open Points (Before Real Data Connection)")
+    st.subheader("Open Points (Before Real Data Connection)")
     st.markdown("""
 1. **Demand source** — confirm LRFP vs MAF (or combination) for lifecycle volume per hub. Owner: SuPM team.
 2. **MinProd_ifOpen values** — collect realistic minimums from factory SMEs (current placeholder: 500–2,000 units).
@@ -1089,9 +1135,9 @@ def render_about_tab():
 def main():
     # Header
     st.markdown(
-        "<h1 style='margin-bottom:0'>🔧 Supply Chain Design — POC v2</h1>"
+        "<h1 style='margin-bottom:0'>Supply Chain Design — POC v2</h1>"
         "<p style='color:#666;margin-top:4px'>Ericsson SCD Optimisation Engine  ·  "
-        "Pilot: KRD901252/11 & KRC4464B1B3B7</p>",
+        "Pilot: KRD901252/11 &amp; KRC4464B1B3B7</p>",
         unsafe_allow_html=True,
     )
 
@@ -1099,8 +1145,8 @@ def main():
     data = get_data()
     if data is None:
         st.error(
-            "⚠ No input data found. Run `python generate_data.py` to create dummy data, "
-            "or upload CSV files in the **Data** tab."
+            "No input data found. Run `python generate_data.py` to create dummy data, "
+            "or upload CSV files in the Data tab."
         )
     else:
         s = data.summary_dict()
@@ -1108,14 +1154,14 @@ def main():
             f"Data: **{s['plants']} plants** · **{len(s['products'])} products** · "
             f"**{s['active_pairs']} active demand pairs** · "
             f"**{s['total_demand']/1000:.0f}k units** lifecycle demand"
-            + ("  |  📁 Uploaded dataset" if st.session_state.data_source == "uploaded" else "")
+            + ("  |  Uploaded dataset" if st.session_state.data_source == "uploaded" else "")
         )
 
     tab_data, tab_config, tab_results, tab_about = st.tabs([
-        "📂 Data",
-        "⚙️ Configuration",
-        "📊 Results",
-        "📖 About",
+        "Data",
+        "Configuration",
+        "Results",
+        "About",
     ])
 
     with tab_data:
