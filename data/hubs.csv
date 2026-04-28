@@ -1,0 +1,8 @@
+Hub,HubName,HubGeo,Region
+Hub_1,Hub Alpha,Region_B,Region B Primary
+Hub_2,Hub Beta,Region_C,Region C Secondary
+Hub_3,Hub Gamma,Region_A,Region A Primary
+Hub_4,Hub Delta,Region_D,Region D Primary
+Hub_5,Hub Epsilon,Region_C,Region C Primary
+Hub_6,Hub Zeta,Region_A,Region A Secondary
+Hub_7,Hub Eta,Region_A,Region A Tertiary

@@ -1,0 +1,9 @@
+PlantID,PlantName,Geo,Category,IsPilotSite,IsVolumeSite,MinProd_ifOpen,FixedCost_MSEK_yr,Cap_Product_A,Cap_Product_B
+Plant_1,Factory Alpha,Region_A,OWN,1,1,2000,2.0,999999,999999
+Plant_2,Factory Beta,Region_A,EXT,0,1,1500,1.5,999999,999999
+Plant_3,Factory Gamma,Region_B,OWN,1,1,1000,4.0,999999,999999
+Plant_4,Factory Delta,Region_B,EXT,1,0,800,3.5,999999,999999
+Plant_5,Factory Epsilon,Region_B,EXT,0,1,1200,3.8,999999,999999
+Plant_6,Factory Zeta,Region_C,OWN,0,1,1500,3.5,999999,999999
+Plant_7,Factory Eta,Region_C,EXT,0,1,1200,3.0,999999,999999
+Plant_8,Factory Theta,Region_D,OWN,0,1,1500,2.5,999999,999999

@@ -1,0 +1,7 @@
+Type,Name,Value,Description
+Geo,Region_A,1,At least 1 plant in Region_A globally open
+Geo,Region_B,1,At least 1 plant in Region_B globally open
+Geo,Region_C,0,No minimum — Region_C is optional
+Geo,Region_D,0,No minimum — Region_D is optional
+Cat,OWN,1,At least 1 own-site (company-operated) plant
+Cat,EXT,1,At least 1 external-site (contract-mfg) plant
