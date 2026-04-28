@@ -1,7 +1,0 @@
-Type,Name,Value,Description
-Geo,CN,1,At least 1 CN plant globally open
-Geo,EU,1,At least 1 EU plant globally open
-Geo,LAT,0,No minimum — LAT is optional
-Geo,US,0,No minimum — US cost covered by route cost
-Cat,ESS,1,At least 1 ESS plant (Ericsson-owned)
-Cat,EMS,1,At least 1 EMS plant (contract manufacturer)
