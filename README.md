@@ -56,27 +56,6 @@ The app opens at `http://localhost:8501`.
 
 Streamlit Community Cloud is free and requires only a public GitHub repository.
 
-**1. Push to GitHub**
-
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/scd-poc-v2.git
-git branch -M main
-git push -u origin main
-```
-
-**2. Deploy**
-
-1. Go to [share.streamlit.io](https://share.streamlit.io) → **New app**
-2. Repository: `YOUR_USERNAME/scd-poc-v2`
-3. Branch: `main`
-4. Main file path: `app.py`
-5. Click **Deploy**
-
-First deploy takes 2–3 minutes while packages install.
-
 **Free tier notes:**
 - The app sleeps after inactivity: open it a minute before any demo to wake it up
 - Uploaded files are session-only (reset on reload); the `data/` folder in the repo is always the default dataset
