@@ -2,8 +2,8 @@
 
 A Python proof-of-concept for multi-plant, multi-product supply chain network design.
 Given lifecycle demand per product and receiving hub, the tool finds the optimal
-allocation of production volume across factories to minimise total landed cost —
-subject to trade-corridor rules, minimum production constraints, and strategic
+allocation of production volume across factories to minimise total landed cost. It
+subjects to trade-corridor rules, minimum production constraints, and strategic
 coverage requirements.
 
 All data in this repository is **fictional**. No company-specific information
@@ -16,7 +16,7 @@ manufacturing network.
 
 Deployed on Streamlit Community Cloud:
 
-**[Open POC v2 →](https://scd-simulation-poc.streamlit.app)**
+**[Open POC v2 →](https://scd-poc.streamlit.app)**
 
 ---
 
@@ -78,9 +78,9 @@ git push -u origin main
 First deploy takes 2–3 minutes while packages install.
 
 **Free tier notes:**
-- The app sleeps after inactivity — open it a minute before any demo to wake it up
+- The app sleeps after inactivity: open it a minute before any demo to wake it up
 - Uploaded files are session-only (reset on reload); the `data/` folder in the repo is always the default dataset
-- Memory limit: 1 GB — well within what this model needs
+- Memory limit: 1 GB (supposed to be well within what this model needs)
 
 ---
 
@@ -118,25 +118,25 @@ different UI without modification.
 
 ### Data tab
 - Download any of the 8 input CSV templates, each with an embedded column guide explaining every field
-- Upload modified files — each is validated on upload with row-level error messages
+- Upload modified files: each is validated on upload with row-level error messages
 - Unuploaded files fall back to the built-in defaults automatically
 - Preview the current active dataset
 
 ### Configuration tab
-- **What-if demand sliders** — adjust lifecycle demand per hub by ±50% before running
+- **What-if demand sliders**: adjust lifecycle demand per hub by ±50% before running
 - Select which scenarios to run (any combination of B1 / B2 / OM / GM)
 - **B2:** single dropdown to select the baseline reference plant (applies to all products)
 - **OM:** alpha slider with live explanation of what the penalty means in cost-equivalent %; regional and category coverage constraints; explicit Run button (no auto-recompute on slider touch)
 - **GM:** regional percentage inputs with automatic sum validation
 
 ### Results tab
-- **Scenario comparison table** — all KPIs for all scenarios in one consolidated table with cost-avoidance delta column
-- **KPI metric cards** — per-scenario with hover tooltips explaining each KPI
+- **Scenario comparison table**: all KPIs for all scenarios in one consolidated table with cost-avoidance delta column
+- **KPI metric cards**: per-scenario with hover tooltips explaining each KPI
 - **Cost and regional breakdown charts** (Plotly, interactive)
-- **Network summary matrix** — plant × hub heatmap showing allocated volumes; hover for product-level breakdown
-- **Diff Sankey diagram** — OM vs a selected baseline, colour-coded by route status (continuing / new / dropped)
-- **Alpha sensitivity analysis** — re-runs OM at 5 α values with chart and summary table
-- **Alerts panel** — new-route alerts and consolidation candidates per scenario
+- **Network summary matrix**: plant × hub heatmap showing allocated volumes; hover for product-level breakdown
+- **Diff Sankey diagram**: OM vs a selected baseline, colour-coded by route status (continuing / new / dropped)
+- **Alpha sensitivity analysis**: re-runs OM at 5 α values with chart and summary table
+- **Alerts panel**: new-route alerts and consolidation candidates per scenario
 - Full allocation and plant summary tables
 - Download all results as a single ZIP or individual CSVs
 
