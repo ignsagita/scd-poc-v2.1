@@ -2,20 +2,20 @@
 """
 SCD POC v2 — Dummy Data Generator
 ===================================
-Generates all input CSVs with realistic dummy data aligned to the
-production Snowflake schema (Requirements v1.0, §6).
+Generates all input CSVs with realistic dummy data aligned to a generic
+production-grade data warehouse schema.
 
 PURPOSE FOR DATA ENGINEERS:
   Each CSV generated here defines the exact table/column contract
-  that must be delivered from Snowflake before real data can be
+  that must be delivered from the data warehouse before real data can be
   connected.  Column names, data types, and allowed values are
   intentional — do not rename without updating scd_poc_v2.py.
 
-PILOT PRODUCTS:
-  KRD901252/11  (AIR 6419 B77D)
-  KRC4464B1B3B7 (Radio 4464 B1/B3/B7)
+PILOT PRODUCTS (FICTIONAL):
+  Product_A  — high-volume product
+  Product_B  — broader-coverage product
 
-PLANT IDs use ERI/{country}-{site} SCN format (same as SAIDA / GFT).
+Plants use the format Plant_1 ... Plant_N. Hubs use Hub_1 ... Hub_N.
 """
 
 import pandas as pd
@@ -26,69 +26,57 @@ import sys
 DATA = Path(__file__).parent / "data"
 DATA.mkdir(parents=True, exist_ok=True)
 
-PRODUCTS = ["KRD901252/11", "KRC4464B1B3B7"]
-CGS      = ["CG_1","CG_2","CG_3","CG_4","CG_5","CG_6","CG_7"]
+PRODUCTS = ["Product_A", "Product_B"]
+HUBS     = ["Hub_1","Hub_2","Hub_3","Hub_4","Hub_5","Hub_6","Hub_7"]
 
-LIFECYCLE_YEARS = 4  # horizon used to scale annual FixedCost → lifecycle cost
+LIFECYCLE_YEARS = 4
 
 # ─── PLANT ATTRIBUTES ────────────────────────────────────────────────────────
-#   PlantID        : SCN code (primary key in SAIDA / GFT)
-#   PlantName      : human-readable factory name
-#   Geo            : CN | EU | LAT | US
-#   Category       : ESS | EMS
-#   IsNPISite      : 1 = approved for NPI/pilot production
-#   IsVolumeSite   : 1 = regular high-volume site
-#   MinProd_ifOpen : min lifecycle volume if plant is open for a product
-#                    (= economic MOQ per plant; SME input needed for real values)
-#   FixedCost_MSEK_yr : annual plant overhead NOT already in LC adder
-#                       (line setup, qualification, staffing above flow cost)
-#                       Source: industrial finance (approx. bands for POC)
-#   Cap_KRD, Cap_KRC : eco-fulfilment capacity per product (lifecycle units)
-#                      999999 = non-binding placeholder until real data arrives
+#   PlantID            : unique plant identifier
+#   PlantName          : human-readable factory name
+#   Geo                : geographic region (Region_A/B/C/D)
+#   Category           : OWN  = company-owned site
+#                        EXT  = external / contract-manufactured site
+#   IsPilotSite        : 1 = approved for new-product/pilot production
+#   IsVolumeSite       : 1 = regular high-volume production site
+#   MinProd_ifOpen     : economic minimum lifecycle volume per product if opened
+#   FixedCost_MSEK_yr  : annual plant overhead (line setup, qualification, staffing)
+#                        NOT already embedded in the per-unit landed cost.
+#   Cap_*              : eco-fulfilment capacity per product (placeholder)
 # ─────────────────────────────────────────────────────────────────────────────
 
 PLANT_ROWS = [
-    # PlantID        Name              Geo  Cat  NPI  Vol  MinProd  FC_yr  Cap_KRD  Cap_KRC
-    ("ERI/CN-ESS",  "ENC_Nanjing",    "CN","ESS", 1,   1,  2000,   2.0, 999999, 999999),
-    ("ERI/CN-EMS",  "WX_Nanjing",     "CN","EMS", 0,   1,  1500,   1.5, 999999, 999999),
-    ("ERI/PL-TC",   "TC_Poland",      "EU","ESS", 1,   1,  1000,   4.0, 999999, 999999),
-    ("ERI/SE-ESH",  "ESH_Sweden",     "EU","EMS", 1,   0,   800,   3.5, 999999, 999999),
-    ("ERI/HU-EMS",  "Flex_Hungary",   "EU","EMS", 0,   1,  1200,   3.8, 999999, 999999),
-    ("ERI/US-EFA",  "EFA_USA",        "US","ESS", 0,   1,  1500,   3.5, 999999, 999999),
-    ("ERI/US-JABIL","Jabil_USA",      "US","EMS", 0,   1,  1200,   3.0, 999999, 999999),
-    ("ERI/MX-GUAD", "GUAD_Mexico",    "LAT","ESS",0,   1,  1500,   2.5, 999999, 999999),
+    # PlantID    Name              Geo         Cat   Pilot Vol  MinProd  FC_yr  Cap_A   Cap_B
+    ("Plant_1",  "Factory Alpha",  "Region_A", "OWN", 1,   1,   2000,   2.0, 999999, 999999),
+    ("Plant_2",  "Factory Beta",   "Region_A", "EXT", 0,   1,   1500,   1.5, 999999, 999999),
+    ("Plant_3",  "Factory Gamma",  "Region_B", "OWN", 1,   1,   1000,   4.0, 999999, 999999),
+    ("Plant_4",  "Factory Delta",  "Region_B", "EXT", 1,   0,    800,   3.5, 999999, 999999),
+    ("Plant_5",  "Factory Epsilon","Region_B", "EXT", 0,   1,   1200,   3.8, 999999, 999999),
+    ("Plant_6",  "Factory Zeta",   "Region_C", "OWN", 0,   1,   1500,   3.5, 999999, 999999),
+    ("Plant_7",  "Factory Eta",    "Region_C", "EXT", 0,   1,   1200,   3.0, 999999, 999999),
+    ("Plant_8",  "Factory Theta",  "Region_D", "OWN", 0,   1,   1500,   2.5, 999999, 999999),
 ]
 
-PLANTS_COLS = ["PlantID","PlantName","Geo","Category","IsNPISite","IsVolumeSite",
-               "MinProd_ifOpen","FixedCost_MSEK_yr","Cap_KRD901252","Cap_KRC4464"]
+PLANTS_COLS = ["PlantID","PlantName","Geo","Category","IsPilotSite","IsVolumeSite",
+               "MinProd_ifOpen","FixedCost_MSEK_yr","Cap_Product_A","Cap_Product_B"]
 
-
-# ─── LC ADDER MATRIX ─────────────────────────────────────────────────────────
-#   Adder[p,g,ProductCategory] = fraction added on top of UnitCost
-#   LCmult = 1 + Adder
-#   Both pilot products are Baseband → same adder on any given route.
-#   None = geopolitically FORBIDDEN route → RouteAllowed=0
-#
-#   Design rules (approximate; real values come from Henrik's LC tool):
-#     Same region    : lowest adder (~0.05-0.10)
-#     Cross-region   : moderate (~0.15-0.22)
-#     Forbidden corridors (ERIDOC BNEW-24:038086Uen):
-#       CN → US (CG_5):  tariff/geopolitical barrier
-#       CN → LAT (CG_4): no established logistics corridor
-#       LAT → SEAO (CG_3): no direct corridor
-#       LAT → MNEA (CG_6, CG_7): no direct corridor
+# ─── LANDED-COST ADDER MATRIX ────────────────────────────────────────────────
+# "Landed cost" = total per-unit cost of moving the product from factory to
+# the receiving hub. Bundles transportation, customs/duties, inventory cost-of-
+# capital, and distribution surcharges into a single multiplier.
+# AdderPct[plant, hub] = fraction added on top of base unit cost.
+# LCmult = 1 + AdderPct.  None = trade corridor not feasible.
 # ─────────────────────────────────────────────────────────────────────────────
-#                   CG_1   CG_2   CG_3   CG_4   CG_5   CG_6   CG_7
-#                  EMEA/SE EMEA/DB SEAO   LatAm  US     MNEA   MNEA/JP
+#                  Hub_1  Hub_2  Hub_3  Hub_4  Hub_5  Hub_6  Hub_7
 ADDER = {
-    "ERI/CN-ESS":  [0.18,  0.20,  0.08,  None,  None,  0.06,  0.07],
-    "ERI/CN-EMS":  [0.19,  0.21,  0.09,  None,  None,  0.07,  0.08],
-    "ERI/PL-TC":   [0.05,  0.10,  0.18,  0.22,  0.20,  0.12,  0.15],
-    "ERI/SE-ESH":  [0.06,  0.11,  0.19,  0.23,  0.21,  0.13,  0.16],
-    "ERI/HU-EMS":  [0.07,  0.10,  0.19,  0.22,  0.21,  0.12,  0.15],
-    "ERI/US-EFA":  [0.20,  0.22,  0.22,  0.12,  0.08,  0.20,  0.22],
-    "ERI/US-JABIL":[0.21,  0.23,  0.23,  0.13,  0.09,  0.21,  0.23],
-    "ERI/MX-GUAD": [0.22,  None,  None,  0.10,  0.12,  None,  None],
+    "Plant_1": [0.18,  0.20,  0.08,  None,  None,  0.06,  0.07],
+    "Plant_2": [0.19,  0.21,  0.09,  None,  None,  0.07,  0.08],
+    "Plant_3": [0.05,  0.10,  0.18,  0.22,  0.20,  0.12,  0.15],
+    "Plant_4": [0.06,  0.11,  0.19,  0.23,  0.21,  0.13,  0.16],
+    "Plant_5": [0.07,  0.10,  0.19,  0.22,  0.21,  0.12,  0.15],
+    "Plant_6": [0.20,  0.22,  0.22,  0.12,  0.08,  0.20,  0.22],
+    "Plant_7": [0.21,  0.23,  0.23,  0.13,  0.09,  0.21,  0.23],
+    "Plant_8": [0.22,  None,  None,  0.10,  0.12,  None,  None],
 }
 
 
@@ -103,18 +91,19 @@ def gen_products():
     """
     products.csv
     ─────────────────────────────────────────────────────
-    ProductID       : parent product code (KRCxxx / KRDxxx level)
-    ProductArea     : Radio | RAN Compute | Site Material
-    ProductCategory : AAS | Baseband | Classical Macro
-                      (determines which LC adder row applies in the LC tool)
-    UnitCost_SEK    : base TK per unit (manufacturing cost, from CRM cost tree)
+    ProductID       : product code (unique key)
+    ProductFamily   : grouping label
+    ProductCategory : sub-category that determines which adder row applies
+                      in the landed-cost tool. Both pilot products share the
+                      same category so they share the same adder per route.
+    UnitCost_SEK    : base manufacturing cost per unit (a.k.a. ex-works cost)
     Description     : human-readable label
     """
     rows = [
-        ("KRD901252/11",  "Radio", "Baseband", 18000, "AIR 6419 B77D"),
-        ("KRC4464B1B3B7", "Radio", "Baseband", 17506, "Radio 4464 B1/B3/B7"),
+        ("Product_A", "Family_X", "Cat_1", 18000, "Fictional pilot product A"),
+        ("Product_B", "Family_X", "Cat_1", 17506, "Fictional pilot product B"),
     ]
-    df = pd.DataFrame(rows, columns=["ProductID","ProductArea","ProductCategory",
+    df = pd.DataFrame(rows, columns=["ProductID","ProductFamily","ProductCategory",
                                      "UnitCost_SEK","Description"])
     df.to_csv(DATA / "products.csv", index=False)
     print(f"  products.csv        — {len(df)} rows")
@@ -126,30 +115,28 @@ def gen_demand():
     demand.csv
     ─────────────────────────────────────────────────────
     ProductID : links to products.csv
-    CG        : customer group / hub (links to cg_map.csv)
+    Hub       : receiving hub (one-to-one with a customer-facing region)
     Demand    : lifecycle volume (3–5 year total) per product-hub
 
-    Source: MAF + LRFP (final source TBD with SuPM team).
-    Rows with Demand=0 are OMITTED — the engine treats missing rows as zero
-    and excludes those CG-product pairs from all constraints (C1, C6).
+    Source: long-range forecast aggregated to lifecycle horizon.
+    Rows with Demand = 0 are OMITTED.
 
-    CG_2 and CG_7 have no demand for either pilot product in this dummy set —
-    this reflects the realistic pattern that not every product covers every MA.
+    Hub_2 and Hub_7 have no demand for either pilot product in this dummy
+    set — reflects realistic coverage gaps (not every product covers every
+    region).
     """
     rows = [
-        # KRD901252/11 — focused on EMEA, SEAO, US
-        ("KRD901252/11",  "CG_1", 30000),
-        ("KRD901252/11",  "CG_3",  5000),
-        ("KRD901252/11",  "CG_5",  2000),
-        # KRC4464B1B3B7 — broader coverage incl. LatAm, MNEA
-        ("KRC4464B1B3B7", "CG_1", 40500),
-        ("KRC4464B1B3B7", "CG_3",  3600),
-        ("KRC4464B1B3B7", "CG_4",   450),
-        ("KRC4464B1B3B7", "CG_6",   450),
+        ("Product_A", "Hub_1", 30000),
+        ("Product_A", "Hub_3",  5000),
+        ("Product_A", "Hub_5",  2000),
+        ("Product_B", "Hub_1", 40500),
+        ("Product_B", "Hub_3",  3600),
+        ("Product_B", "Hub_4",   450),
+        ("Product_B", "Hub_6",   450),
     ]
-    df = pd.DataFrame(rows, columns=["ProductID","CG","Demand"])
+    df = pd.DataFrame(rows, columns=["ProductID","Hub","Demand"])
     df.to_csv(DATA / "demand.csv", index=False)
-    print(f"  demand.csv          — {len(df)} rows  (zero-demand CGs omitted)")
+    print(f"  demand.csv          — {len(df)} rows  (zero-demand hubs omitted)")
     return df
 
 
@@ -157,31 +144,27 @@ def gen_routes():
     """
     routes.csv
     ─────────────────────────────────────────────────────
-    PlantID         : SCN plant code
-    CG              : customer group / hub
-    ProductCategory : AAS | Baseband | Classical Macro
-                      The LC adder is per (plant, hub, ProductCategory).
-                      Both pilot products are Baseband — they share the same
-                      adder on any given route. Include this column so the
-                      schema supports future product categories without change.
-    AdderPct        : LC adder as decimal (e.g. 0.18 = 18%)
+    PlantID         : factory shipping the product
+    Hub             : receiving hub
+    ProductCategory : category that determines adder applicability
+    AdderPct        : landed-cost adder as decimal (e.g. 0.18 = 18%)
     LCmult          : 1 + AdderPct (convenience column; redundant but useful)
 
-    Source: Henrik's landed cost tool / CRM cost tree.
-    Only ALLOWED routes appear here. Forbidden routes → route_allowed.csv.
+    Source: company landed-cost tool / cost tree.
+    Only ALLOWED routes appear in this file.
     """
     rows = []
     plants_list = [r[0] for r in PLANT_ROWS]
     for plant in plants_list:
-        for j, cg in enumerate(CGS):
+        for j, hub in enumerate(HUBS):
             adder = ADDER[plant][j]
             if adder is not None:
                 rows.append({
-                    "PlantID": plant,
-                    "CG": cg,
-                    "ProductCategory": "Baseband",
-                    "AdderPct": round(adder, 4),
-                    "LCmult": round(1 + adder, 4),
+                    "PlantID":         plant,
+                    "Hub":             hub,
+                    "ProductCategory": "Cat_1",
+                    "AdderPct":        round(adder, 4),
+                    "LCmult":          round(1 + adder, 4),
                 })
     df = pd.DataFrame(rows)
     df.to_csv(DATA / "routes.csv", index=False)
@@ -193,70 +176,56 @@ def gen_route_allowed():
     """
     route_allowed.csv
     ─────────────────────────────────────────────────────
-    PlantID      : SCN plant code
-    CG           : customer group / hub
-    RouteAllowed : 1 = geopolitically allowed for all products
-                   0 = FORBIDDEN for all products (ERIDOC BNEW-24:038086Uen)
+    PlantID      : factory
+    Hub          : receiving hub
+    RouteAllowed : 1 = trade corridor allowed for all products
+                   0 = corridor FORBIDDEN (geopolitical / tariff /
+                       regulatory restriction or no logistics path)
 
-    IMPORTANT: RouteAllowed is product-agnostic. If a plant-hub route is
-    forbidden, it is forbidden for every product on that route.
-
-    Data owner: Clovis Hiroshi Kawai.
-    Changes infrequently but is a HARD model constraint — stale data causes
-    infeasibility or incorrect recommendations.
-
-    Forbidden corridors in this dummy set:
-      CN → US (CG_5)   : tariff / geopolitical barrier
-      CN → LAT (CG_4)  : no established logistics corridor
-      LAT → SEAO (CG_3): no direct corridor
-      LAT → MNEA (CG_6/7): no direct corridor
-      LAT → EMEA/DB (CG_2): no corridor from Mexico/LatAm to Dubai
+    Product-agnostic: a forbidden corridor is forbidden for every product.
     """
     rows = []
     plants_list = [r[0] for r in PLANT_ROWS]
     for plant in plants_list:
-        for j, cg in enumerate(CGS):
+        for j, hub in enumerate(HUBS):
             adder = ADDER[plant][j]
             rows.append({
-                "PlantID": plant,
-                "CG": cg,
+                "PlantID":      plant,
+                "Hub":          hub,
                 "RouteAllowed": 0 if adder is None else 1,
             })
     df = pd.DataFrame(rows)
     df.to_csv(DATA / "route_allowed.csv", index=False)
-    allowed = df.RouteAllowed.sum()
+    allowed   = df.RouteAllowed.sum()
     forbidden = (df.RouteAllowed == 0).sum()
     print(f"  route_allowed.csv   — {len(df)} rows  ({allowed} allowed, {forbidden} forbidden)")
     return df
 
 
-def gen_cg_map():
+def gen_hubs():
     """
-    cg_map.csv
+    hubs.csv
     ─────────────────────────────────────────────────────
-    CG          : customer group ID
-    MarketArea  : Ericsson market area name
-    HubName     : supply hub name
-    HubGeo      : geo region of the hub (used for reporting only)
+    Hub        : hub identifier
+    HubName    : human-readable hub name
+    HubGeo     : geo region the hub serves (used for reporting)
+    Region     : commercial region label (free text)
 
     Used for display/reporting only — NOT a constraint parameter.
-
-    NOTE on naming: CG_3 hub is 'Nanjing', CG_6/CG_7 hub is 'China'.
-    Both are physically in China but they are DISTINCT hubs in Ericsson's
-    hub network. Do not conflate them.
+    Each hub has a one-to-one mapping with one customer-facing region.
     """
     rows = [
-        ("CG_1","EMEA",         "Sweden_SE",    "EU"),
-        ("CG_2","EMEA",         "Dubai_DB",     "MNEA"),
-        ("CG_3","MOAI_SEAO",    "Nanjing_NJ",   "CN"),
-        ("CG_4","MACS_ex_US",   "LatAm_Multi",  "LAT"),
-        ("CG_5","MACS_US",      "Dallas_EFA",   "US"),
-        ("CG_6","MNEA_ex_JP",   "China_CN",     "CN"),
-        ("CG_7","MNEA_JP",      "China_CN",     "CN"),
+        ("Hub_1","Hub Alpha",   "Region_B", "Region B Primary"),
+        ("Hub_2","Hub Beta",    "Region_C", "Region C Secondary"),
+        ("Hub_3","Hub Gamma",   "Region_A", "Region A Primary"),
+        ("Hub_4","Hub Delta",   "Region_D", "Region D Primary"),
+        ("Hub_5","Hub Epsilon", "Region_C", "Region C Primary"),
+        ("Hub_6","Hub Zeta",    "Region_A", "Region A Secondary"),
+        ("Hub_7","Hub Eta",     "Region_A", "Region A Tertiary"),
     ]
-    df = pd.DataFrame(rows, columns=["CG","MarketArea","HubName","HubGeo"])
-    df.to_csv(DATA / "cg_map.csv", index=False)
-    print(f"  cg_map.csv          — {len(df)} rows")
+    df = pd.DataFrame(rows, columns=["Hub","HubName","HubGeo","Region"])
+    df.to_csv(DATA / "hubs.csv", index=False)
+    print(f"  hubs.csv            — {len(df)} rows")
     return df
 
 
@@ -265,56 +234,43 @@ def gen_hist_flow(demand_df, plants_df):
     hist_flow.csv
     ─────────────────────────────────────────────────────
     ProductID    : links to products.csv
-    PlantID      : SCN plant code
-    CG           : customer group / hub
-    HistFlow     : 1 = this route existed historically for this product
-                   0 = new route (no historical precedent)
-    HistVolShare : historical volume share across plants for this product-CG
-                   (optional; used for reference only, not in the MILP)
+    PlantID      : factory
+    Hub          : receiving hub
+    HistFlow     : 1 = route used historically; 0 = new route
+    HistVolShare : historical volume share across plants for the same
+                   (product, hub) pair. Optional reference column.
 
-    Source: Amrith's SCD flow description in Snowflake (table TBD).
-    For POC v2: DUMMY DATA. Historical flows are approximated as the
-    routes that would be used in a sensible baseline network (what a
-    well-informed user would expect to see as "today's SCD").
+    For POC v2: DUMMY DATA constructed as a sensible "today's network".
+    Real source in production: historical flow description in the data
+    warehouse.
 
-    Impact on optimisation:
-      - Routes with HistFlow=0 incur a soft penalty (α × mean UnitCost per unit)
-        in the OM objective → model prefers historical routes when cost is similar.
-      - New-route alerts are generated for any Alloc > 0 where HistFlow = 0.
+    Impact:
+      - HistFlow = 0 routes incur a soft penalty in the OM objective.
+      - "New-route alerts" raised when allocation > 0 on HistFlow = 0 routes.
     """
-    # KRD901252/11 historical network:
-    #   CG_1 (EMEA): split between Poland (70%) and CN-ESS (30%)
-    #   CG_3 (SEAO): entirely from CN-ESS (near hub)
-    #   CG_5 (US):   entirely from EFA-USA (local)
-    # KRC4464B1B3B7 historical network:
-    #   CG_1 (EMEA): split Poland (60%) and CN-ESS (40%)
-    #   CG_3 (SEAO): entirely from CN-ESS
-    #   CG_4 (LatAm): from Mexico GUAD
-    #   CG_6 (MNEA):  from CN-EMS
-
     hist_routes = {
-        ("KRD901252/11",  "ERI/CN-ESS",  "CG_1"): 0.30,
-        ("KRD901252/11",  "ERI/PL-TC",   "CG_1"): 0.70,
-        ("KRD901252/11",  "ERI/CN-ESS",  "CG_3"): 1.00,
-        ("KRD901252/11",  "ERI/US-EFA",  "CG_5"): 1.00,
-        ("KRC4464B1B3B7", "ERI/CN-ESS",  "CG_1"): 0.40,
-        ("KRC4464B1B3B7", "ERI/PL-TC",   "CG_1"): 0.60,
-        ("KRC4464B1B3B7", "ERI/CN-ESS",  "CG_3"): 1.00,
-        ("KRC4464B1B3B7", "ERI/MX-GUAD", "CG_4"): 1.00,
-        ("KRC4464B1B3B7", "ERI/CN-EMS",  "CG_6"): 1.00,
+        ("Product_A", "Plant_1", "Hub_1"): 0.30,
+        ("Product_A", "Plant_3", "Hub_1"): 0.70,
+        ("Product_A", "Plant_1", "Hub_3"): 1.00,
+        ("Product_A", "Plant_6", "Hub_5"): 1.00,
+        ("Product_B", "Plant_1", "Hub_1"): 0.40,
+        ("Product_B", "Plant_3", "Hub_1"): 0.60,
+        ("Product_B", "Plant_1", "Hub_3"): 1.00,
+        ("Product_B", "Plant_8", "Hub_4"): 1.00,
+        ("Product_B", "Plant_2", "Hub_6"): 1.00,
     }
 
     all_plants = plants_df.PlantID.tolist()
     rows = []
     for prod in PRODUCTS:
         for plant in all_plants:
-            for cg in CGS:
-                key = (prod, plant, cg)
+            for hub in HUBS:
+                key = (prod, plant, hub)
                 share = hist_routes.get(key, 0.0)
                 rows.append({
                     "ProductID":    prod,
                     "PlantID":      plant,
-                    "CG":           cg,
+                    "Hub":          hub,
                     "HistFlow":     1 if share > 0 else 0,
                     "HistVolShare": round(share, 2),
                 })
@@ -329,22 +285,20 @@ def gen_coverage_params():
     """
     coverage_params.csv
     ─────────────────────────────────────────────────────
-    Type  : Geo | Cat
-    Name  : geography code (CN/EU/LAT/US) or category (ESS/EMS)
-    Value : minimum number of globally open plants required
-            (applied to OpenGlobal[p], not per-product Open[i,p])
+    Type        : Geo | Cat
+    Name        : geo code (Region_A/B/C/D) or category (OWN/EXT)
+    Value       : minimum number of globally open plants required
+    Description : free-text rationale
 
-    These are strategic policy constraints, configurable per scenario.
-    They are NOT hard rules from ERIDOC. Default values reflect the
-    baseline supply chain strategy.
+    Strategic policy constraints, configurable per scenario.
     """
     rows = [
-        ("Geo", "CN",  1, "At least 1 CN plant globally open"),
-        ("Geo", "EU",  1, "At least 1 EU plant globally open"),
-        ("Geo", "LAT", 0, "No minimum — LAT is optional"),
-        ("Geo", "US",  0, "No minimum — US cost covered by route cost"),
-        ("Cat", "ESS", 1, "At least 1 ESS plant (Ericsson-owned)"),
-        ("Cat", "EMS", 1, "At least 1 EMS plant (contract manufacturer)"),
+        ("Geo", "Region_A", 1, "At least 1 plant in Region_A globally open"),
+        ("Geo", "Region_B", 1, "At least 1 plant in Region_B globally open"),
+        ("Geo", "Region_C", 0, "No minimum — Region_C is optional"),
+        ("Geo", "Region_D", 0, "No minimum — Region_D is optional"),
+        ("Cat", "OWN",      1, "At least 1 own-site (company-operated) plant"),
+        ("Cat", "EXT",      1, "At least 1 external-site (contract-mfg) plant"),
     ]
     df = pd.DataFrame(rows, columns=["Type","Name","Value","Description"])
     df.to_csv(DATA / "coverage_params.csv", index=False)
@@ -359,18 +313,18 @@ def main():
     print("═"*56)
     print(f"\nWriting to: {DATA}/\n")
 
-    plants_df  = gen_plants()
+    plants_df   = gen_plants()
     products_df = gen_products()
-    demand_df  = gen_demand()
+    demand_df   = gen_demand()
     gen_routes()
     gen_route_allowed()
-    gen_cg_map()
+    gen_hubs()
     gen_hist_flow(demand_df, plants_df)
     gen_coverage_params()
 
     print(f"\n{'─'*56}")
     print("  All files generated.")
-    print("  Replace with real Snowflake data before production use.")
+    print("  Replace with real data warehouse exports before production use.")
     print(f"{'─'*56}\n")
 
 
