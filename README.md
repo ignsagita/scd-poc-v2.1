@@ -190,16 +190,16 @@ similar, not enough to block a genuinely better route.
 ```
 KPI                            B1-Nearest  B2-Baseline  OM-Optimised  GM-RegMix
 ──────────────────────────────────────────────────────────────────────────────
-Landed Cost (MSEK)               1532.6       1553.6        1539.5      1644.0
-Fixed Plant Cost (MSEK)            48.0         16.0          22.0        54.0
-Total Cost (MSEK)                1580.6       1569.6        1561.5      1698.0
+Landed Cost ($)               1532.6       1553.6        1539.5      1644.0
+Fixed Plant Cost ($)            48.0         16.0          22.0        54.0
+Total Cost ($)                1580.6       1569.6        1561.5      1698.0
 Cost / Unit                      18,690       18,947        18,774      20,707
 Cost Avoidance vs B2              -11.0           —           +8.1       -128.4
 # Open Plants                         4            1             2           4
 New-Route Alerts                      1            5             4           5
 ```
 
-OM opens 2 plants and saves **8.1 MSEK vs the B2 single-plant baseline** over the
+OM opens 2 plants and saves **$ 8.1  vs the B2 single-plant baseline** over the
 lifecycle. The Regional Mix (30% Region_A / 70% Region_B) costs more because forcing
 volume into Region_A for hubs without allowed Region_A routes triggers fallbacks.
 
@@ -221,8 +221,7 @@ The fictional dataset is designed to exercise all model features:
 
 ## Connecting real data
 
-Replace the dummy CSVs in `data/` with real data warehouse exports. No code changes
-are required as long as column names match the schemas in `generate_data.py`.
+Replace the dummy CSVs in `data/` with real data warehouse exports and ensure the column names match the schemas in `generate_data.py`.
 Each file has a docstring describing the expected source for every column.
 
 Three things to confirm before connecting real data:
