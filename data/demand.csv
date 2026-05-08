@@ -2,7 +2,7 @@ ProductID,Hub,Demand
 Product_A,Hub_1,30000
 Product_A,Hub_3,5000
 Product_A,Hub_5,2000
-Product_B,Hub_1,40500
-Product_B,Hub_3,3600
-Product_B,Hub_4,450
-Product_B,Hub_6,450
+Product_B,Hub_1,40000
+Product_B,Hub_3,4000
+Product_B,Hub_4,500
+Product_B,Hub_6,500

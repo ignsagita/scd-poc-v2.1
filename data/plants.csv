@@ -1,4 +1,4 @@
-PlantID,PlantName,Geo,Category,IsPilotSite,IsVolumeSite,MinProd_ifOpen,FixedCost_MSEK_yr,Cap_Product_A,Cap_Product_B
+PlantID,PlantName,Geo,Category,IsPilotSite,IsVolumeSite,MinProd_ifOpen,FixedCost_yr,Cap_Product_A,Cap_Product_B
 Plant_1,Factory Alpha,Region_A,OWN,1,1,2000,2.0,999999,999999
 Plant_2,Factory Beta,Region_A,EXT,0,1,1500,1.5,999999,999999
 Plant_3,Factory Gamma,Region_B,OWN,1,1,1000,4.0,999999,999999

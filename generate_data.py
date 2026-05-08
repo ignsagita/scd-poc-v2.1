@@ -40,7 +40,7 @@ LIFECYCLE_YEARS = 4
 #   IsPilotSite        : 1 = approved for new-product/pilot production
 #   IsVolumeSite       : 1 = regular high-volume production site
 #   MinProd_ifOpen     : economic minimum lifecycle volume per product if opened
-#   FixedCost_MSEK_yr  : annual plant overhead (line setup, qualification, staffing)
+#   FixedCost_yr       : annual plant overhead (line setup, qualification, staffing)
 #                        NOT already embedded in the per-unit landed cost.
 #   Cap_*              : eco-fulfilment capacity per product (placeholder)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ PLANT_ROWS = [
 ]
 
 PLANTS_COLS = ["PlantID","PlantName","Geo","Category","IsPilotSite","IsVolumeSite",
-               "MinProd_ifOpen","FixedCost_MSEK_yr","Cap_Product_A","Cap_Product_B"]
+               "MinProd_ifOpen","FixedCost_yr","Cap_Product_A","Cap_Product_B"]
 
 # ─── LANDED-COST ADDER MATRIX ────────────────────────────────────────────────
 # "Landed cost" = total per-unit cost of moving the product from factory to
@@ -96,15 +96,15 @@ def gen_products():
     ProductCategory : sub-category that determines which adder row applies
                       in the landed-cost tool. Both pilot products share the
                       same category so they share the same adder per route.
-    UnitCost_SEK    : base manufacturing cost per unit (a.k.a. ex-works cost)
+    UnitCost        : base manufacturing cost per unit (a.k.a. ex-works cost)
     Description     : human-readable label
     """
     rows = [
-        ("Product_A", "Family_X", "Cat_1", 18000, "Fictional pilot product A"),
-        ("Product_B", "Family_X", "Cat_1", 17506, "Fictional pilot product B"),
+        ("Product_A", "Family_X", "Cat_1", 1000, "Fictional pilot product A"),
+        ("Product_B", "Family_X", "Cat_1", 900, "Fictional pilot product B"),
     ]
     df = pd.DataFrame(rows, columns=["ProductID","ProductFamily","ProductCategory",
-                                     "UnitCost_SEK","Description"])
+                                     "UnitCost","Description"])
     df.to_csv(DATA / "products.csv", index=False)
     print(f"  products.csv        — {len(df)} rows")
     return df
@@ -129,10 +129,10 @@ def gen_demand():
         ("Product_A", "Hub_1", 30000),
         ("Product_A", "Hub_3",  5000),
         ("Product_A", "Hub_5",  2000),
-        ("Product_B", "Hub_1", 40500),
-        ("Product_B", "Hub_3",  3600),
-        ("Product_B", "Hub_4",   450),
-        ("Product_B", "Hub_6",   450),
+        ("Product_B", "Hub_1", 40000),
+        ("Product_B", "Hub_3",  4000),
+        ("Product_B", "Hub_4",   500),
+        ("Product_B", "Hub_6",   500),
     ]
     df = pd.DataFrame(rows, columns=["ProductID","Hub","Demand"])
     df.to_csv(DATA / "demand.csv", index=False)

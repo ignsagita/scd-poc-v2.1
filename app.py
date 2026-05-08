@@ -127,10 +127,10 @@ def _results_zip(results: dict) -> bytes:
         rows = []
         for label, k in results.items():
             r = {"Scenario": label,
-                 "LandedCost_MSEK":  round(k["total_lc_sek"]/1e6, 2),
-                 "FixedCost_MSEK":   round(k["fixed_cost_sek"]/1e6, 2),
-                 "TotalCost_MSEK":   round(k["total_cost_sek"]/1e6, 2),
-                 "CostPerUnit":      round(k["cost_per_unit_sek"]),
+                 "LandedCost":  round(k["total_lc"]/1e6, 2),
+                 "FixedCost":   round(k["fixed_cost"]/1e6, 2),
+                 "TotalCost":   round(k["total_cost"]/1e6, 2),
+                 "CostPerUnit":      round(k["cost_per_unit"]),
                  "WeightedLC_Pct":   round(k["weighted_lc_pct"], 2),
                  "N_OpenPlants":     k["n_open_plants"]}
             for g in GEOS:
@@ -147,8 +147,8 @@ def _results_zip(results: dict) -> bytes:
 
 def _chart_cost(results: dict) -> go.Figure:
     labels = list(results.keys())
-    lc     = [results[l]["total_lc_sek"]/1e6 for l in labels]
-    fc     = [results[l]["fixed_cost_sek"]/1e6 for l in labels]
+    lc     = [results[l]["total_lc"]/1e6 for l in labels]
+    fc     = [results[l]["fixed_cost"]/1e6 for l in labels]
     total  = [a + b for a, b in zip(lc, fc)]
     colors = [SCENARIO_COLORS.get(l, "#607D8B") for l in labels]
 
@@ -174,8 +174,8 @@ def _chart_cost(results: dict) -> go.Figure:
         )
     fig.update_layout(
         barmode="stack",
-        title="Total Lifecycle Cost (MSEK) — zoomed to show differences",
-        yaxis_title="MSEK", yaxis_range=[y_min, y_max],
+        title="Total Lifecycle Cost ($) — zoomed to show differences",
+        yaxis_title="$", yaxis_range=[y_min, y_max],
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         height=460, margin=dict(t=90, b=30, l=70, r=20),
         plot_bgcolor="white", paper_bgcolor="white",
@@ -353,20 +353,20 @@ def _chart_sankey(om_kpis: dict, bl_kpis: dict, data: SCDData) -> go.Figure:
 
 def _chart_alpha_sensitivity(alpha_results: list) -> go.Figure:
     alphas  = [r["alpha"] for r in alpha_results]
-    costs   = [r["total_lc_sek"]/1e6 for r in alpha_results]
+    costs   = [r["total_lc"]/1e6 for r in alpha_results]
     plants  = [r["n_open_plants"] for r in alpha_results]
     new_rts = [len(r["new_routes_df"]) for r in alpha_results]
 
     fig = make_subplots(
         rows=2, cols=1,
         subplot_titles=[
-            "Landed Cost (MSEK) — how cost changes with α",
+            "Landed Cost ($) — how cost changes with α",
             "Network structure — open plants and new-route alerts",
         ],
         vertical_spacing=0.18,
     )
     fig.add_trace(go.Scatter(
-        x=alphas, y=costs, name="Landed Cost (MSEK)",
+        x=alphas, y=costs, name="Landed Cost ($)",
         mode="lines+markers", line=dict(color="#1976D2", width=2.5),
         marker=dict(size=8),
     ), row=1, col=1)
@@ -382,7 +382,7 @@ def _chart_alpha_sensitivity(alpha_results: list) -> go.Figure:
     ), row=2, col=1)
 
     cost_pad = max((max(costs) - min(costs)) * 0.5, 0.5)
-    fig.update_yaxes(title_text="MSEK",
+    fig.update_yaxes(title_text="$",
                      range=[min(costs)-cost_pad, max(costs)+cost_pad],
                      gridcolor="#F0F0F0", row=1, col=1)
     fig.update_yaxes(title_text="Count",
@@ -679,14 +679,14 @@ def render_config_tab():
         )
         mean_uc = (sum(data.unit_cost.values()) / len(data.unit_cost)
                    if data.unit_cost else 17000)
-        penalty_sek = alpha_val * mean_uc
+        penalty = alpha_val * mean_uc
         col_l, col_r = st.columns(2)
         col_l.info(
             f"Equivalent to ≈ **{alpha_val*100:.1f}% cost difference** per unit "
             f"on non-historical routes."
         )
         col_r.metric("Penalty per non-historical unit",
-                     f"{penalty_sek:,.0f} (cost units)")
+                     f"{penalty:,.0f} (cost units)")
         cfg["om_alpha"] = alpha_val
 
         st.markdown("##### Regional & Category Coverage (optional)")
@@ -844,20 +844,20 @@ def render_results_tab():
 
     # ── Consolidated KPI comparison table (Image 1 from user feedback) ─────────
     st.subheader("Scenario Comparison")
-    b2_cost = results.get("B2-Baseline", {}).get("total_cost_sek")
+    b2_cost = results.get("B2-Baseline", {}).get("total_cost")
 
     table_rows = []
     for label, k in results.items():
         if b2_cost and label != "B2-Baseline":
-            avoid = f"{(b2_cost - k['total_cost_sek'])/1e6:+.1f}"
+            avoid = f"{(b2_cost - k['total_cost'])/1e6:+.1f}"
         else:
             avoid = "— (reference)"
         table_rows.append({
             "Scenario":             label,
-            "Landed Cost (MSEK)":   f"{k['total_lc_sek']/1e6:.1f}",
-            "Fixed Cost (MSEK)":    f"{k['fixed_cost_sek']/1e6:.1f}",
-            "Total Cost (MSEK)":    f"{k['total_cost_sek']/1e6:.1f}",
-            "Cost / Unit":          f"{k['cost_per_unit_sek']:,.0f}",
+            "Landed Cost ($)":   f"{k['total_lc']/1e6:.1f}",
+            "Fixed Cost ($)":    f"{k['fixed_cost']/1e6:.1f}",
+            "Total Cost ($)":    f"{k['total_cost']/1e6:.1f}",
+            "Cost / Unit":          f"{k['cost_per_unit']:,.0f}",
             "Weighted LC %":        f"{k['weighted_lc_pct']:.2f}%",
             "# Open Plants":        k["n_open_plants"],
             "Cost Avoidance vs B2": avoid,
@@ -873,18 +873,18 @@ def render_results_tab():
     kpi_cols = st.columns(len(results))
     for col, (label, k) in zip(kpi_cols, results.items()):
         if b2_cost and label != "B2-Baseline":
-            val = (b2_cost - k["total_cost_sek"]) / 1e6
-            avoidance = f"{val:+.1f} MSEK"
+            val = (b2_cost - k["total_cost"]) / 1e6
+            avoidance = f"$ {val:+.1f}"
         else:
             avoidance = "— (reference)"
         col.metric("Scenario",            label)
-        col.metric("Total Cost (MSEK)",   f"{k['total_cost_sek']/1e6:.1f}",
+        col.metric("Total Cost ($)",   f"{k['total_cost']/1e6:.1f}",
                    help="Landed cost + fixed plant overhead.")
-        col.metric("Landed Cost (MSEK)",  f"{k['total_lc_sek']/1e6:.1f}",
+        col.metric("Landed Cost ($)",  f"{k['total_lc']/1e6:.1f}",
                    help="Volume × LCmult × UnitCost. Excludes fixed overhead.")
-        col.metric("Fixed Cost (MSEK)",   f"{k['fixed_cost_sek']/1e6:.1f}",
+        col.metric("Fixed Cost ($)",   f"{k['fixed_cost']/1e6:.1f}",
                    help="Plant overhead × lifecycle years, per open plant.")
-        col.metric("Cost / Unit",         f"{k['cost_per_unit_sek']:,.0f}",
+        col.metric("Cost / Unit",         f"{k['cost_per_unit']:,.0f}",
                    help="Total landed cost ÷ total volume.")
         col.metric("Weighted LC %",       f"{k['weighted_lc_pct']:.2f}%",
                    help="Volume-weighted average LC multiplier. Lower is better.")
@@ -989,9 +989,9 @@ def render_results_tab():
             )
             summary = pd.DataFrame([
                 {"α": r["alpha"],
-                 "Landed Cost (MSEK)":  round(r["total_lc_sek"]/1e6, 1),
-                 "Fixed Cost (MSEK)":   round(r["fixed_cost_sek"]/1e6, 1),
-                 "Total Cost (MSEK)":   round(r["total_cost_sek"]/1e6, 1),
+                 "Landed Cost ($)":  round(r["total_lc"]/1e6, 1),
+                 "Fixed Cost ($)":   round(r["fixed_cost"]/1e6, 1),
+                 "Total Cost ($)":   round(r["total_cost"]/1e6, 1),
                  "# Open Plants":       r["n_open_plants"],
                  "New-Route Alerts":    len(r["new_routes_df"])}
                 for r in st.session_state.alpha_results

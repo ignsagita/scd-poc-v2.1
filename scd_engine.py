@@ -36,10 +36,10 @@ SCHEMAS: dict[str, dict] = {
     "plants.csv": {
         "required": ["PlantID", "PlantName", "Geo", "Category",
                      "IsPilotSite", "IsVolumeSite",
-                     "MinProd_ifOpen", "FixedCost_MSEK_yr"],
+                     "MinProd_ifOpen", "FixedCost_yr"],
         "numeric":  ["IsPilotSite", "IsVolumeSite",
-                     "MinProd_ifOpen", "FixedCost_MSEK_yr"],
-        "non_neg":  ["MinProd_ifOpen", "FixedCost_MSEK_yr"],
+                     "MinProd_ifOpen", "FixedCost_yr"],
+        "non_neg":  ["MinProd_ifOpen", "FixedCost_yr"],
         "choices":  {
             "Geo":      ["Region_A", "Region_B", "Region_C", "Region_D"],
             "Category": ["OWN", "EXT"],
@@ -48,17 +48,17 @@ SCHEMAS: dict[str, dict] = {
             "Plant master. One row per factory. "
             "Geo groups plants by geographic region (Region_A through Region_D). "
             "Category: OWN = company-operated site, EXT = external / contract manufacturer. "
-            "FixedCost_MSEK_yr is the annual overhead NOT already embedded in the per-unit "
+            "FixedCost_yr is the annual overhead NOT already embedded in the per-unit "
             "landed cost (line setup, qualification, fixed staffing)."
         ),
     },
     "products.csv": {
-        "required": ["ProductID", "ProductFamily", "ProductCategory", "UnitCost_SEK"],
-        "numeric":  ["UnitCost_SEK"],
-        "non_neg":  ["UnitCost_SEK"],
+        "required": ["ProductID", "ProductFamily", "ProductCategory", "UnitCost"],
+        "numeric":  ["UnitCost"],
+        "non_neg":  ["UnitCost"],
         "choices":  {},
         "doc": (
-            "Product master. UnitCost_SEK is the base manufacturing cost per unit "
+            "Product master. UnitCost is the base manufacturing cost per unit "
             "(ex-works cost, from the company costing system). "
             "ProductCategory determines which landed-cost adder row applies — "
             "products in the same category share the same adder on any given route."
@@ -240,9 +240,9 @@ class SCDData:
         self.plant_cat  = dict(zip(self.plants.PlantID, self.plants.Category))
         self.plant_name = dict(zip(self.plants.PlantID, self.plants.PlantName))
         self.min_prod   = dict(zip(self.plants.PlantID, self.plants.MinProd_ifOpen))
-        self.fixed_cost = dict(zip(self.plants.PlantID, self.plants.FixedCost_MSEK_yr))
+        self.fixed_cost = dict(zip(self.plants.PlantID, self.plants.FixedCost_yr))
 
-        self.unit_cost  = dict(zip(self.products.ProductID, self.products.UnitCost_SEK))
+        self.unit_cost  = dict(zip(self.products.ProductID, self.products.UnitCost))
         self.mean_uc    = float(np.mean(list(self.unit_cost.values())))
 
         # demand_map: (ProductID, Hub) → Demand
@@ -343,8 +343,8 @@ def _alloc_row(product: str, plant: str, hub: str,
         "Hub":             hub,
         "Qty":             qty,
         "LCmult":          lc,
-        "UnitCost_SEK":    uc,
-        "LandedCost_SEK":  qty * lc * uc,
+        "UnitCost":    uc,
+        "LandedCost":  qty * lc * uc,
         "HistFlow":        hf,
         "IsNewRoute":      1 - hf,
     }
@@ -450,9 +450,9 @@ def run_om(data: SCDData, config: dict) -> tuple[pd.DataFrame, dict]:
                     obj_terms.append(coeff * Alloc[(i, p, h)])
 
     for p in P:
-        fc_sek = data.fixed_cost.get(p, 0.0) * 1_000_000 * LIFECYCLE_YEARS
-        if fc_sek > 0:
-            obj_terms.append(fc_sek * OpenGlobal[p])
+        fc = data.fixed_cost.get(p, 0.0) * 1_000_000 * LIFECYCLE_YEARS
+        if fc > 0:
+            obj_terms.append(fc * OpenGlobal[p])
 
     mdl += pulp.lpSum(obj_terms), "TotalObjective"
 
@@ -611,7 +611,7 @@ def compute_kpis(alloc_df: pd.DataFrame, data: SCDData,
     df["Cat"] = df.PlantID.map(data.plant_cat)
 
     total_vol   = df.Qty.sum()
-    total_lc    = df.LandedCost_SEK.sum()
+    total_lc    = df.LandedCost.sum()
     weighted_lc = (df.Qty * df.LCmult).sum() / total_vol if total_vol else 0.0
     cost_pu     = total_lc / total_vol if total_vol else 0.0
 
@@ -638,8 +638,8 @@ def compute_kpis(alloc_df: pd.DataFrame, data: SCDData,
             "Category":          data.plant_cat.get(p),
             "IsOpen":            int(is_open),
             "TotalQty":          round(sub.Qty.sum()),
-            "LandedCost_MSEK":   sub.LandedCost_SEK.sum() / 1e6,
-            "FixedCost_MSEK":    (data.fixed_cost.get(p, 0.0) * LIFECYCLE_YEARS
+            "LandedCost":   sub.LandedCost.sum() / 1e6,
+            "FixedCost":    (data.fixed_cost.get(p, 0.0) * LIFECYCLE_YEARS
                                   if is_open else 0.0),
         }
         for prod in data.products_list:
@@ -667,16 +667,16 @@ def compute_kpis(alloc_df: pd.DataFrame, data: SCDData,
         "new_routes_df":     new_routes,
         "consol_df":         pd.DataFrame(consol),
         "total_vol":         total_vol,
-        "total_lc_sek":      total_lc,
-        "fixed_cost_sek":    fixed_total,
-        "total_cost_sek":    total_lc + fixed_total,
-        "cost_per_unit_sek": cost_pu,
+        "total_lc":      total_lc,
+        "fixed_cost":    fixed_total,
+        "total_cost":    total_lc + fixed_total,
+        "cost_per_unit": cost_pu,
         "weighted_lc_pct":   weighted_lc * 100,
         "n_open_plants":     len(open_plants),
         "open_plants":       open_plants,
         "geo_pct":           geo_pct,
         "cat_pct":           cat_pct,
-        "cost_by_prod":      df.groupby("ProductID")["LandedCost_SEK"].sum().to_dict(),
+        "cost_by_prod":      df.groupby("ProductID")["LandedCost"].sum().to_dict(),
         "vol_by_prod":       df.groupby("ProductID")["Qty"].sum().to_dict(),
         "milp_meta":         meta,
         "run_alerts":        alerts or [],
